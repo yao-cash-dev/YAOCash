@@ -61,12 +61,13 @@ contract DAOstake is Ownable {
     // YAO token
     YAOToken public yao;
 
-    // Percent of YAO is distributed to treasury wallet per block: 25.0%
-    uint256 public constant TREASURY_WALLET_PERCENT = 2500;
-    // Percent of YAO is distributed to community wallet per block: 25.0%
-    uint256 public constant COMMUNITY_WALLET_PERCENT = 2500;
-    // Percent of YAO is distributed to pools per block: 50.0%
-    uint256 public constant POOL_PERCENT = 5000;
+    // Percent of YAO is distributed to private round and public sale: 40.0%, pre-mint
+    // Percent of YAO is distributed to treasury wallet per block: 15.0%
+    uint256 public constant TREASURY_WALLET_PERCENT = 1500;
+    // Percent of YAO is distributed to community wallet per block: 15.0%
+    uint256 public constant COMMUNITY_WALLET_PERCENT = 1500;
+    // Percent of YAO is distributed to pools per block: 30.0%
+    uint256 public constant POOL_PERCENT = 3000;
 
     // Total pool weight / Sum of all pool weights
     uint256 public totalPoolWeight;
