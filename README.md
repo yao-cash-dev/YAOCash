@@ -1,0 +1,1 @@
+# YAOCash Governance Token (YAO)
