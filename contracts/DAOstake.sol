@@ -104,8 +104,7 @@ contract DAOstake is Ownable {
         address _communityWalletAddr,
         YAOToken _yao
     ) public {
-        // 4320000 = BLOCK_PER_PERIOD * 25
-        periodYAOPerBlock[1] = 4320000 ether;
+        periodYAOPerBlock[1] = 25 ether;
 
         for (uint256 i = 2; i <= PERIOD_AMOUNT; i++) {
             periodYAOPerBlock[i] = periodYAOPerBlock[i.sub(1)].mul(9900).div(10000);
