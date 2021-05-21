@@ -45,9 +45,9 @@ contract DAOstake is Ownable {
     END_BLOCK = START_BLOCK + BLOCK_PER_PERIOD * PERIOD_AMOUNT 
     */
     // First block that DAOstake will start from
-    uint256 public constant START_BLOCK = 0;
+    uint256 public constant START_BLOCK = 5093575;
     // First block that DAOstake will end from
-    uint256 public constant END_BLOCK = 0;
+    uint256 public constant END_BLOCK = START_BLOCK + 4147200 - 1;
     // Amount of block per period
     uint256 public constant BLOCK_PER_PERIOD = 172800;
     // Amount of period
@@ -72,6 +72,7 @@ contract DAOstake is Ownable {
     // Total pool weight / Sum of all pool weights
     uint256 public totalPoolWeight;
     Pool[] public pool;
+    mapping (address => bool) public lpTokens;
     // pool id => user address => user info
     mapping (uint256 => mapping (address => User)) public user;
 
@@ -95,6 +96,11 @@ contract DAOstake is Ownable {
     event Withdraw(address indexed user, uint256 indexed poolId, uint256 amount);
 
     event EmergencyWithdraw(address indexed user, uint256 indexed poolId, uint256 amount);
+
+    modifier validatePoolByPid(uint256 _pid) {
+        require(_pid < pool.length, "Pool does not exist");
+        _;
+    }
 
     /**
      * @notice Update YAO amount per block for each period when deploying. Be careful of gas spending!
@@ -135,6 +141,7 @@ contract DAOstake is Ownable {
      * @notice Set YAO token address. Can only be called by owner
      */
     function setYAO(YAOToken _yao) public onlyOwner {
+        require(address(_yao) != address(0), "_yao address cannot be 0");
         yao = _yao;
     
         emit SetYAO(yao);
@@ -144,7 +151,7 @@ contract DAOstake is Ownable {
      * @notice Transfer ownership of YAO token. Can only be called by this smart contract owner
      *
      */
-    function transferYAOOwnership(address _newOwner) public onlyOwner {
+    function transferYAOOwnership(address _newOwner) external onlyOwner {
         yao.transferOwnership(_newOwner);
         emit TransferYAOOwnership(_newOwner);
     }
@@ -184,7 +191,7 @@ contract DAOstake is Ownable {
     /** 
      * @notice Get pending YAO amount of user in pool
      */
-    function pendingYAO(uint256 _pid, address _user) external view returns(uint256) {
+    function pendingYAO(uint256 _pid, address _user) external view validatePoolByPid(_pid) returns(uint256) {
         Pool storage pool_ = pool[_pid];
         User storage user_ = user[_pid][_user];
         uint256 accYAOPerLP = pool_.accYAOPerLP;
@@ -203,9 +210,12 @@ contract DAOstake is Ownable {
      * @notice Add a new LP to pool. Can only be called by owner
      * DO NOT add the same LP token more than once. YAO rewards will be messed up if you do
      */
-    function addPool(address _lpTokenAddress, uint256 _poolWeight, bool _withUpdate) public onlyOwner {
+    function addPool(address _lpTokenAddress, uint256 _poolWeight, bool _withUpdate) external onlyOwner {
         require(block.number < END_BLOCK, "Already ended");
         require(_lpTokenAddress.isContract(), "LP token address should be smart contract address");
+
+        require(!lpTokens[_lpTokenAddress], " _lpTokenAddress already exist");
+        lpTokens[_lpTokenAddress] = true;
 
         if (_withUpdate) {
             massUpdatePools();
@@ -227,7 +237,7 @@ contract DAOstake is Ownable {
     /** 
      * @notice Update the given pool's weight. Can only be called by owner.
      */
-    function setPoolWeight(uint256 _pid, uint256 _poolWeight, bool _withUpdate) public onlyOwner {
+    function setPoolWeight(uint256 _pid, uint256 _poolWeight, bool _withUpdate) external onlyOwner validatePoolByPid(_pid) {
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -241,7 +251,7 @@ contract DAOstake is Ownable {
     /** 
      * @notice Update reward variables of the given pool to be up-to-date.
      */
-    function updatePool(uint256 _pid) public {
+    function updatePool(uint256 _pid) public validatePoolByPid(_pid) {
         Pool storage pool_ = pool[_pid];
 
         if (block.number <= pool_.lastRewardBlock) {
@@ -286,7 +296,7 @@ contract DAOstake is Ownable {
      * @param _pid       Id of the pool to be deposited to
      * @param _amount    Amount of LP tokens to be deposited
      */
-    function deposit(uint256 _pid, uint256 _amount) public {
+    function deposit(uint256 _pid, uint256 _amount) public validatePoolByPid(_pid) {
         Pool storage pool_ = pool[_pid];
         User storage user_ = user[_pid][msg.sender];
 
@@ -300,8 +310,8 @@ contract DAOstake is Ownable {
         }
 
         if(_amount > 0) {
-            IERC20(pool_.lpTokenAddress).safeTransferFrom(address(msg.sender), address(this), _amount);
             user_.lpAmount = user_.lpAmount.add(_amount);
+            IERC20(pool_.lpTokenAddress).safeTransferFrom(address(msg.sender), address(this), _amount);
         }
 
         user_.finishedYAO = user_.lpAmount.mul(pool_.accYAOPerLP).div(1 ether);
@@ -315,7 +325,7 @@ contract DAOstake is Ownable {
      * @param _pid       Id of the pool to be withdrawn from
      * @param _amount    amount of LP tokens to be withdrawn
      */
-    function withdraw(uint256 _pid, uint256 _amount) public {
+    function withdraw(uint256 _pid, uint256 _amount) public validatePoolByPid(_pid) {
         Pool storage pool_ = pool[_pid];
         User storage user_ = user[_pid][msg.sender];
 
@@ -344,7 +354,7 @@ contract DAOstake is Ownable {
      *
      * @param _pid    Id of the pool to be emergency withdrawn from
      */
-    function emergencyWithdraw(uint256 _pid) public {
+    function emergencyWithdraw(uint256 _pid) public validatePoolByPid(_pid) {
         Pool storage pool_ = pool[_pid];
         User storage user_ = user[_pid][msg.sender];
 

@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 /// YAO token
-contract YAOToken is ERC20("YAOToken", "YAO"), Ownable {
+contract YAOToken is ERC20("YAOCash", "YAO"), Ownable {
     using Address for address;
     using SafeMath for uint256;
 
@@ -61,6 +61,12 @@ contract YAOToken is ERC20("YAOToken", "YAO"), Ownable {
     function mint(address _to, uint256 _amount) public onlyOwner {
         _mint(_to, _amount);
         _moveDelegates(address(0), _delegates[_to], _amount);
+    }
+
+    /// @notice Burn `_amount` token from `_from`. Must only be called by the owner
+    function burn(address _from, uint256 _amount) public onlyOwner {
+        _burn(_from, _amount);
+        _moveDelegates(_delegates[_from], address(0), _amount);
     }
 
     /// @notice Override ERC20.transfer
